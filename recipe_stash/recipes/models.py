@@ -1,8 +1,12 @@
 from django.db import models
+from markdownx.models import MarkdownxField
 
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
 
 
 class Recipe(models.Model):
@@ -22,6 +26,7 @@ class Recipe(models.Model):
     overall_time = models.DurationField()
     recipe_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     ingredients = models.ManyToManyField(Ingredient, through='RecipeIngredient')
+    instructions = MarkdownxField(null=True)
     # rating = models.FloatField()
 
 
@@ -37,3 +42,6 @@ class Author(models.Model):  # later replace with AbstractUser or other auth alt
     username = models.CharField(max_length=50, unique=True)
     bio = models.TextField()
     public = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
