@@ -1,8 +1,8 @@
 from django.contrib import admin
 
-from .models import Author, Ingredient, Recipe, RecipeIngredient
+from .models import User, Ingredient, Recipe, RecipeIngredient, Comment, Tag, RecipeTag
 
-class AuthorAdmin(admin.ModelAdmin):
+class UserAdmin(admin.ModelAdmin):
     list_display = ('name', 'public')
 
 
@@ -14,10 +14,22 @@ class IngredientInRecipe(admin.TabularInline):
     model = RecipeIngredient
 
 
-class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'date', 'recipe_type')
-    inlines = [IngredientInRecipe]
+class TagsInRecipe(admin.TabularInline):
+    model = RecipeTag
 
-admin.site.register(Author, AuthorAdmin)
+
+class CommentsInRecipe(admin.TabularInline):
+    model = Comment
+
+
+class RecipeAdmin(admin.ModelAdmin):
+    list_display = ('title', 'author', 'date')
+    inlines = [IngredientInRecipe, TagsInRecipe, CommentsInRecipe]
+
+
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name')
+
+admin.site.register(User, UserAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Recipe, RecipeAdmin)
