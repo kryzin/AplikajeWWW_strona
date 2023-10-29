@@ -1,23 +1,16 @@
 
-# Recipe Management System
+# RecipeStash - recipe-sharing forum
 
-# Funkcje
+## Database
 
-- baza przepisów (create, edit, delete)
-- baza zarejestrowanych użytkowników (not registered == read only)
-- filtrowanie/sortowanie po składnikach/czasie/kategorii
-- (?) input ingredients -> get a recipe
-- admin -> CRUD on users
+![](img/db.sqlite3%20-%20recipes_recipe.png)
+- Main models: Recipe, User(author in recipe), Ingredient, Tag, Comment
+*not yet: Favourites or Collections to group 'saved' recipes*
+- Models aiding in relations: RecipeIngredient, RecipeTag
 
-# Bazy danych
+## Endpoints (wip)
 
-- recipes (name, author, time, ingredients, difficulty level, instructions, type, *rating*)
-  - ingredients (name, quantity/unit of measurement)
-- users/authors (name, username, bio, *public/private if you don't want to share your secrets*)
-
-# Wymagania
-
-- 4-5 modeli
-  - dodać komentarze?/posty lifestyle poza przepisami/komunikacja między autorami
-- uwierzytelnianie i autoryzacja
-- endpointy dla: CRUD i coś co nie jest CRUDem
+- CRUD Recipe, User, Ingredient, Tag, Comment
+- Search for recipe by tag, by ingredients, by author
+- Adding recipes to and creating Favourites lists
+- Get most viewed/commented recipe on front page
