@@ -1,13 +1,13 @@
 from django.contrib import admin
 
-from .models import User, Ingredient, Recipe, RecipeIngredient, Comment, Tag, RecipeTag
+from .models import Profile, Ingredient, Recipe, RecipeIngredient, Comment, Tag, RecipeTag
 
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('name', 'public')
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('name', 'username', 'bio', 'public', 'creation_date', 'owner')
 
 
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    display = ('name')
 
 
 class IngredientInRecipe(admin.TabularInline):
@@ -30,6 +30,7 @@ class RecipeAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name')
 
-admin.site.register(User, UserAdmin)
+
+admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Recipe, RecipeAdmin)

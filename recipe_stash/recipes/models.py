@@ -1,15 +1,19 @@
 from django.db import models
 from markdownx.models import MarkdownxField
+from django.contrib.auth.models import User
+from datetime import date
 
 
-class User(models.Model):  # later just connect as User adjacent
+class Profile(models.Model):  # later just connect as User adjacent
     name = models.CharField(max_length=100)
     username = models.CharField(max_length=50, unique=True)
     bio = models.TextField()
     public = models.BooleanField(default=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
-        return self.name
+        return f"{self.username} ({self.name})"
 
 
 class Ingredient(models.Model):
@@ -28,7 +32,7 @@ class Tag(models.Model):
 
 class Recipe(models.Model):
     title = models.CharField(max_length=100)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
     preparation_time = models.DurationField()
     overall_time = models.DurationField()
