@@ -8,37 +8,37 @@ from django.contrib.auth.models import User
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        read_only_fields = ['id', 'creation_date', 'user']
-        fields = '__all__'
-    def validate_name(self, value): # only letters + space
-        if not all(char.isalpha() or char == ' ' for char in value):
-            raise serializers.ValidationError(f"{date.today()} Nazwa może zawierać tylko litery.")
-        return value
+        read_only_fields = ['id']
+        fields = ['username', 'first_name', 'last_name', 'date_joined', 'email']
 
-    def update(self, instance, validated_data): # override for validation
-        instance.name = validated_data.get('name', instance.name)
-        self.validate_name(instance.name)
-        instance.save()
-        return instance
 
 class ProfileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['']
+        fields = ['first_name', 'last_name', 'username']
+
+
+class ProfileCreationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['username', 'email', 'password', 'public']
+        extra_kwargs = {'password': {'write_only': True}}
+    def create(self, validated_data):
+        profile = Profile.objects.create_user(**validated_data)
+        return profile
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = '__all__'
-        read_only_fields = ['id']
+        fields = ['name']
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer()
     class Meta:
         model = RecipeIngredient
-        fields = ['recipe', 'ingredient', 'quantity']
+        fields = ['ingredient', 'quantity']
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -55,9 +55,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    comments = CommentSerializer(many=True, read_only=True)
-    recipe_ingredients = RecipeIngredientSerializer(many=True)
-    tags = TagSerializer(many=True)
+    # comments = CommentSerializer(many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(many=True)
+    # tags = TagSerializer(many=True)
 
     class Meta:
         model = Recipe

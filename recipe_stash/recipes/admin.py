@@ -14,17 +14,13 @@ class IngredientInRecipe(admin.TabularInline):
     model = RecipeIngredient
 
 
-class TagsInRecipe(admin.TabularInline):
-    model = Recipe.tags.through
-
-
 class CommentsInRecipe(admin.TabularInline):
     model = Comment
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'date')
-    inlines = [IngredientInRecipe, TagsInRecipe, CommentsInRecipe]
+    display = ('title', 'author', 'date')
+    inlines = [IngredientInRecipe, CommentsInRecipe]
 
 
 class TagAdmin(admin.ModelAdmin):

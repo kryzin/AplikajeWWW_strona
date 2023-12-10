@@ -31,6 +31,9 @@ AUTH_USER_MODEL = 'recipes.Profile'
 
 # Application definition
 
+LOGIN_URL='/api-auth/login'
+LOGIN_REDIRECT_URL='/recipes/'
+
 INSTALLED_APPS = [
     'rest_framework',
     'recipes.apps.RecipesConfig',
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
+    'rest_framework.authtoken',
     'markdownx',
 ]
 

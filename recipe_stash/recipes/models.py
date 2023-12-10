@@ -9,7 +9,7 @@ class Profile(AbstractUser):  # overrides django default auth user
     public = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} ({self.username})"
+        return f"{self.first_name} {self.last_name} ({self.username})"
 
 
 class Ingredient(models.Model):
@@ -32,7 +32,7 @@ class Recipe(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     preparation_time = models.DurationField()
     overall_time = models.DurationField()
-    ingredients = models.ManyToManyField(Ingredient, through='RecipeIngredient')
+    ingredients = models.ManyToManyField('RecipeIngredient')
     instructions = MarkdownxField(null=True)
     tags = models.ManyToManyField(Tag)
     # rating = models.FloatField()
@@ -42,7 +42,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    used_in = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     quantity = models.CharField(max_length=50)
 

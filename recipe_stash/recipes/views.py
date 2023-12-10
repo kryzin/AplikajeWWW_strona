@@ -2,162 +2,227 @@ from django.http import HttpResponse, Http404
 from rest_framework import status
 from rest_framework.response import Response
 from .models import Profile, Recipe
-from .serializers import RecipeSerializer, ProfileSerializer, TagSerializer
+from .serializers import RecipeSerializer, ProfileCreationSerializer, ProfileSerializer, ProfileListSerializer, TagSerializer
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework import permissions
 import copy
+from rest_framework.decorators import api_view
+from django.contrib.auth.decorators import login_required
+from .forms import CreationForm
 
 # views still missing:
 """
+TOKENSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS EVERYWHEREEEEE
 CRUD for Ingredients etc.,
 Comments: CRUD + see them in Recipe,
-Forms for new user
-Recipes of given Author, or Profile with all it's recipes,
-Search for recipe by tags in url,
-Search for recipe by ingredients in url
 """
 
 def index(request):
     return HttpResponse("This is a Recipe Management Website.")
 
-
-class ProfileDetail(APIView):
+@api_view(['POST'])
+def profile_create(request):
     """
-    + add auth here for only the owner of the profile
-    CRUD
-    Get/Update/Delete a Profile object with given pk
+    create a new Profile (AbstractUser)
+    input: username, password, email, public(bool)
     """
-    def get_queryset(self):
-        return Profile.objects.all()
+    serializer = ProfileCreationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_object(self, pk):
-        try:
-            return Profile.objects.get(pk=pk)
-        except Profile.DoesNotExist:
-            raise Http404
+@api_view(['GET'])
+def profile_detail(request, pk):
+    """
+    Show Profile(id=pk)
+    For everyone, shows only if public (admin overrides)
+    """
+    try:
+        profile = Profile.objects.get(pk=pk)
+    except Profile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request, pk, format=None):
-        profile = self.get_object(pk)
-        serializer = ProfileSerializer(profile)
-        return Response(serializer.data)
+    if request.method == 'GET':
+        if profile.public or request.user.is_staff: # show only if public/ is admin
+            serializer = ProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_206_PARTIAL_CONTENT)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-    def put(self, request, pk, format=None):
-        profile = self.get_object(pk)
+@login_required
+@api_view(['GET', 'PUT', 'DELETE'])
+def myprofile_detail(request):
+    """
+    See/Edit/Delete your own Profile
+    """
+    profile = request.user
+    serializer = ProfileSerializer(profile)
+    if request.method == 'GET':
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    if request.method == 'PUT':
         serializer = ProfileSerializer(profile, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        print(serializer.errors)
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        profile = self.get_object(pk)
+    if request.method == 'DELETE':
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-class ProfileList(APIView):
+@login_required # LOGIN_URL set in settings
+@api_view(['GET'])
+def profile_list(request):
     """
-    All Profile Objects
+    All Public Profiles
+    AdminOnly: All Profiles
     """
-    def get(self, request, format=None):
-        profiles = Profile.objects.all()
-        serializer = ProfileSerializer(profiles, many=True)
-        return Response(serializer.data)
+    if request.method == 'GET':
+        user = request.user
+        if user.is_authenticated:
+            if user.is_staff:
+                profiles = Profile.objects.all() # all for admin - staff
+            else:
+                profiles = Profile.objects.filter(public=True) # only public profiles
+        serializer = ProfileListSerializer(profiles, many=True)
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-
-class RecipeDetail(APIView):
+@api_view(['GET'])
+def recipe_list(request):
     """
-    + add auth that only author can edit
-    CRUD
-    Get/Update/Create/Delete a Recipe object with given pk
+    Show all recipes of public profiles
+    ignore public=false for admin
     """
-    def get_queryset(self):
-        return Recipe.objects.all()
-
-    def get_object(self, pk):
-        try:
-            return Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            raise Http404
-
-    def get(self, request, pk, format=None):
-        recipe = self.get_object(pk)
-        serializer = RecipeSerializer(recipe)
-        return Response(serializer.data)
-
-    def put(self, request, pk, format=None):
-        recipe = self.get_object(pk)
-        serializer = RecipeSerializer(recipe, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        print(serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def post(self, request, format=None):
-        serializer = RecipeSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        recipe = self.get_object(pk)
-        recipe.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class RecipeList(APIView):
-    """
-    + everyone can see all recipes (of public accounts)
-    All Recipe Objects
-    """
-    def get(self, request, format=None):
-        recipes = Recipe.objects.all()
+    if request.method == 'GET':
+        recipes = Recipe.objects.filter(author__public=True)
+        if request.user.is_staff:
+            recipes = Recipe.objects.all()
         serializer = RecipeSerializer(recipes, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-class TagDetail(APIView):
+@api_view(['GET'])
+def recipe_detail(request, pk):
     """
-    CRUD
-    Get/Update/Create/Delete a Tag object with given pk
+    Show Recipe(id=pk) (only if public=true or user=author)
+    or also add edit if user=author
     """
-    def get_queryset(self):
-        return Tag.objects.all()
 
-    def get_object(self, pk):
-        try:
-            return Tag.objects.get(pk=pk)
-        except Tag.DoesNotExist:
-            raise Http404
+@api_view([])
+def recipes_by_author(request, pk):
+    """
+    can you also show profile all?
+    Show all recipes of author=Profile(id=pk)
+    """
 
-    def get(self, request, pk, format=None):
-        tag = self.get_object(pk)
-        serializer = TagSerializer(tag)
-        return Response(serializer.data)
+@api_view([])
+def recipes_by_tag(request, substr):
+    """
+    Show all recipes with (tags contains Tag(name=substr)) //or pk
+    """
 
-    def put(self, request, pk, format=None):
-        tag = self.get_object(pk)
-        serializer = TagSerializer(tag, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        print(serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view([])
+def recipes_by_title(request, substr):
+    """
+    Show recipes with title containing substr
+    """
 
-    def post(self, request, format=None):
-        serializer = TagSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        tag = self.get_object(pk)
-        tag.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+@api_view([])
+def recipes_with_ingredients(request):
+    """
+    input ingredients as list in url: /ingredients=milk&flour&fish
+    """
+# class RecipeDetail(APIView):
+#     """
+#     + add auth that only author can edit
+#     CRUD
+#     Get/Update/Create/Delete a Recipe object with given pk
+#     """
+#     def get_queryset(self):
+#         return Recipe.objects.all()
+#
+#     def get_object(self, pk):
+#         try:
+#             return Recipe.objects.get(pk=pk)
+#         except Recipe.DoesNotExist:
+#             raise Http404
+#
+#     def get(self, request, pk, format=None):
+#         recipe = self.get_object(pk)
+#         serializer = RecipeSerializer(recipe)
+#         return Response(serializer.data)
+#
+#     def put(self, request, pk, format=None):
+#         recipe = self.get_object(pk)
+#         serializer = RecipeSerializer(recipe, data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         print(serializer.errors)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def post(self, request, format=None):
+#         serializer = RecipeSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def delete(self, request, pk, format=None):
+#         recipe = self.get_object(pk)
+#         recipe.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
+#
+#
+# class RecipeList(APIView):
+#     """
+#     + everyone can see all recipes (of public accounts)
+#     All Recipe Objects
+#     """
+#     def get(self, request, format=None):
+#         recipes = Recipe.objects.all()
+#         serializer = RecipeSerializer(recipes, many=True)
+#         return Response(serializer.data)
+#
+#
+# class TagDetail(APIView):
+#     """
+#     CRUD
+#     Get/Update/Create/Delete a Tag object with given pk
+#     """
+#     def get_queryset(self):
+#         return Tag.objects.all()
+#
+#     def get_object(self, pk):
+#         try:
+#             return Tag.objects.get(pk=pk)
+#         except Tag.DoesNotExist:
+#             raise Http404
+#
+#     def get(self, request, pk, format=None):
+#         tag = self.get_object(pk)
+#         serializer = TagSerializer(tag)
+#         return Response(serializer.data)
+#
+#     def put(self, request, pk, format=None):
+#         tag = self.get_object(pk)
+#         serializer = TagSerializer(tag, data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         print(serializer.errors)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def post(self, request, format=None):
+#         serializer = TagSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def delete(self, request, pk, format=None):
+#         tag = self.get_object(pk)
+#         tag.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
