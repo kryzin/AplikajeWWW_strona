@@ -14,7 +14,7 @@ import copy
 """
 CRUD for Ingredients etc.,
 Comments: CRUD + see them in Recipe,
-Register a new User -> Create a Profile (1-1 User-Profile),
+Forms for new user
 Recipes of given Author, or Profile with all it's recipes,
 Search for recipe by tags in url,
 Search for recipe by ingredients in url
@@ -61,7 +61,6 @@ class ProfileDetail(APIView):
 
 class ProfileList(APIView):
     """
-    + add auth, only show *my* profiles
     All Profile Objects
     """
     def get(self, request, format=None):

@@ -1,9 +1,9 @@
 from django.contrib import admin
 
-from .models import Profile, Ingredient, Recipe, RecipeIngredient, Comment, Tag, RecipeTag
+from .models import Ingredient, Recipe, RecipeIngredient, Comment, Tag, Profile
 
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('name', 'username', 'bio', 'public', 'creation_date', 'owner')
+    list_display = ('username', 'first_name', 'last_name', 'bio', 'public')
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -15,7 +15,7 @@ class IngredientInRecipe(admin.TabularInline):
 
 
 class TagsInRecipe(admin.TabularInline):
-    model = RecipeTag
+    model = Recipe.tags.through
 
 
 class CommentsInRecipe(admin.TabularInline):
