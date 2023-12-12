@@ -49,7 +49,7 @@ def profile_detail(request, pk):
     if request.method == 'GET':
         if profile.public or request.user.is_staff: # show only if public/ is admin
             serializer = ProfileSerializer(profile)
-            return Response(serializer.data, status=status.HTTP_206_PARTIAL_CONTENT)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -77,23 +77,22 @@ def myprofile_detail(request):
 @api_view(['GET'])
 def profile_list(request):
     """
-    All Public Profiles
+    All Public Profiles,
     AdminOnly: All Profiles
     """
     if request.method == 'GET':
-        user = request.user
-        if user.is_authenticated:
-            if user.is_staff:
+        if request.user.is_authenticated:
+            if request.user.is_staff:
                 profiles = Profile.objects.all() # all for admin - staff
             else:
                 profiles = Profile.objects.filter(public=True) # only public profiles
         serializer = ProfileListSerializer(profiles, many=True)
-        return Response(status=status.HTTP_401_UNAUTHORIZED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def recipe_list(request):
     """
-    Show all recipes of public profiles
+    Show all recipes of public profiles,
     ignore public=false for admin
     """
     if request.method == 'GET':
@@ -103,31 +102,72 @@ def recipe_list(request):
         serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'DELETE'])
 def recipe_detail(request, pk):
     """
     Show Recipe(id=pk) (only if public=true or user=author)
-    or also add edit if user=author
+    Edit/Delete Recipe if request.user = author
     """
+    try:
+        recipe = Recipe.objects.get(pk=pk)
+    except Recipe.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-@api_view([])
+    if request.method == 'GET':
+        if recipe.author.public or request.user.is_staff: # show only if public/ is admin
+            serializer = RecipeSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+
+    if request.method == 'PUT' or request.method == 'DELETE':
+        if request.user == recipe.author:
+            if request.method == 'PUT':
+                serializer = RecipeSerializer(recipe)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if request.method == 'DELETE':
+                recipe.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+@api_view(['GET'])
 def recipes_by_author(request, pk):
     """
-    can you also show profile all?
-    Show all recipes of author=Profile(id=pk)
+    Show all recipes of author=Profile(id=pk),
+    *obv only if public profile
     """
+    if request.method == 'GET':
+        author = Profile.objects.get(pk=pk)
+        if author.public:
+            recipes = Recipe.objects.filter(author__pk=pk)
+            serializer = RecipeSerializer(recipes, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-@api_view([])
+
+@api_view(['GET'])
 def recipes_by_tag(request, substr):
     """
-    Show all recipes with (tags contains Tag(name=substr)) //or pk
+    Show all recipes with (tags contains Tag(name=substr))
     """
+    if request.method == 'GET':
+        recipes = Recipe.objects.filter(tags__name__icontains=substr, author__public=True)
+        serializer = RecipeSerializer(recipes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view([])
 def recipes_by_title(request, substr):
     """
     Show recipes with title containing substr
     """
+    if request.method == 'GET':
+        recipes = Recipe.objects.filter(title__icontains=substr, author__public=True)
+        serializer = RecipeSerializer(recipes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view([])
 def recipes_with_ingredients(request):

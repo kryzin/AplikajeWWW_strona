@@ -55,9 +55,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    # comments = CommentSerializer(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
     ingredients = RecipeIngredientSerializer(many=True)
-    # tags = TagSerializer(many=True)
+    tags = TagSerializer(many=True)
 
     class Meta:
         model = Recipe
