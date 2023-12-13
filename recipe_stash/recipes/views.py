@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from .models import Profile, Recipe
 from .serializers import RecipeSerializer, CommentSerializer, ProfileCreationSerializer, ProfileSerializer, ProfileListSerializer
-from rest_framework.authentication import SessionAuthentication
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import PermissionDenied
 from rest_framework import permissions
@@ -19,7 +19,7 @@ def index(request):
 @api_view(['POST'])
 def profile_create(request):
     """
-    create a new Profile (AbstractUser)
+    create a new Profile (AbstractUser),
     input: username, password, email, public(bool)
     """
     serializer = ProfileCreationSerializer(data=request.data)
@@ -31,8 +31,8 @@ def profile_create(request):
 @api_view(['GET'])
 def profile_detail(request, pk):
     """
-    Show Profile(id=pk)
-    For everyone, shows only if public (admin overrides)
+    Show Profile(id=pk),
+    For everyone - shows only if public (admin overrides)
     """
     try:
         profile = Profile.objects.get(pk=pk)
@@ -48,7 +48,7 @@ def profile_detail(request, pk):
 
 @login_required # just to redirect to login if not logged-in
 @api_view(['GET', 'PUT', 'DELETE'])
-@authentication_classes([SessionAuthentication])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
 def myprofile_detail(request):
     """
@@ -68,11 +68,27 @@ def myprofile_detail(request):
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
 def profile_list(request):
+    """
+    All Public Profiles,
+    AdminOnly: All Profiles
+    """
+    if request.method == 'GET':
+        if request.user.is_authenticated:
+            if request.user.is_staff:
+                profiles = Profile.objects.all() # all for admin - staff
+            else:
+                profiles = Profile.objects.filter(public=True) # only public profiles
+        serializer = ProfileListSerializer(profiles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def profile_token(request):
     """
     All Public Profiles,
     AdminOnly: All Profiles
@@ -102,7 +118,7 @@ def recipe_list(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 def recipe_detail(request, pk):
     """
-    Show Recipe(id=pk) (only if public=true or user=author)
+    Show Recipe(id=pk) (only if public=true or user=author),
     Edit/Delete Recipe if request.user = author
     """
     try:
@@ -190,7 +206,7 @@ def comment_create(request, pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'POST':
-        serializer = CommentSerializer(data=request.data)
+        serializer = CommentSerializer(data=request.data) # serializer with only content field
         if serializer.is_valid():
             serializer.save(user=request.user, recipe=recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
