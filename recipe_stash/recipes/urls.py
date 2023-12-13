@@ -8,7 +8,6 @@ urlpatterns = [
     path('new-profile/', views.profile_create),
     path('profile/<int:pk>/', views.profile_detail),
     path('myprofile/', views.myprofile_detail),
-    path('profiles-token/', views.profile_token),
 
     path('recipes/', views.recipe_list),
     path('recipe/<int:pk>/', views.recipe_detail),

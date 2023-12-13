@@ -23,6 +23,17 @@ class ProfileCreationSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['username', 'email', 'password', 'public']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_username(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError("Username must be at least 5 characters long.")
+        return value
+
+    def validate_email(self, value):
+        if Profile.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already in use.")
+        return value
+
     def create(self, validated_data):
         profile = Profile.objects.create_user(**validated_data)
         return profile

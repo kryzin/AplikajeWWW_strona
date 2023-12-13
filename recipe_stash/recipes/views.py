@@ -13,6 +13,10 @@ from django.contrib.auth.decorators import login_required
 from .forms import CreationForm
 
 
+class BearerTokenAuthentication(TokenAuthentication):
+    keyword = u"Bearer"
+
+
 def index(request):
     return HttpResponse("This is a Recipe Management Website.")
 
@@ -72,23 +76,6 @@ def myprofile_detail(request):
 @authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
 def profile_list(request):
-    """
-    All Public Profiles,
-    AdminOnly: All Profiles
-    """
-    if request.method == 'GET':
-        if request.user.is_authenticated:
-            if request.user.is_staff:
-                profiles = Profile.objects.all() # all for admin - staff
-            else:
-                profiles = Profile.objects.filter(public=True) # only public profiles
-        serializer = ProfileListSerializer(profiles, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def profile_token(request):
     """
     All Public Profiles,
     AdminOnly: All Profiles
