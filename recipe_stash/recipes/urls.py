@@ -14,4 +14,7 @@ urlpatterns = [
     path('recipes-by-author/<int:pk>/', views.recipes_by_author),
     path('recipes-by-tag/<str:substr>', views.recipes_by_tag),
     path('recipes-by-title/<str:substr>', views.recipes_by_title),
+    path('recipes-with-ingredients/', views.recipes_with_ingredients),
+
+    path('comment/<int:pk>', views.comment_create),
 ]

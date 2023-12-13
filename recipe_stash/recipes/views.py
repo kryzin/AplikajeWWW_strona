@@ -2,23 +2,16 @@ from django.http import HttpResponse, Http404
 from rest_framework import status
 from rest_framework.response import Response
 from .models import Profile, Recipe
-from .serializers import RecipeSerializer, ProfileCreationSerializer, ProfileSerializer, ProfileListSerializer, TagSerializer
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from .serializers import RecipeSerializer, CommentSerializer, ProfileCreationSerializer, ProfileSerializer, ProfileListSerializer
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import PermissionDenied
-from rest_framework.views import APIView
 from rest_framework import permissions
 import copy
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.contrib.auth.decorators import login_required
 from .forms import CreationForm
 
-# views still missing:
-"""
-TOKENSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS EVERYWHEREEEEE
-CRUD for Ingredients etc.,
-Comments: CRUD + see them in Recipe,
-"""
 
 def index(request):
     return HttpResponse("This is a Recipe Management Website.")
@@ -53,8 +46,10 @@ def profile_detail(request, pk):
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-@login_required
+@login_required # just to redirect to login if not logged-in
 @api_view(['GET', 'PUT', 'DELETE'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def myprofile_detail(request):
     """
     See/Edit/Delete your own Profile
@@ -73,8 +68,10 @@ def myprofile_detail(request):
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@login_required # LOGIN_URL set in settings
+
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def profile_list(request):
     """
     All Public Profiles,
@@ -148,7 +145,6 @@ def recipes_by_author(request, pk):
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-
 @api_view(['GET'])
 def recipes_by_tag(request, substr):
     """
@@ -169,100 +165,33 @@ def recipes_by_title(request, substr):
         serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-@api_view([])
+@api_view(['GET'])
 def recipes_with_ingredients(request):
     """
-    input ingredients as list in url: /ingredients=milk&flour&fish
+    input ingredients as list in url: /?ingredients=milk,flour,fish
     """
-# class RecipeDetail(APIView):
-#     """
-#     + add auth that only author can edit
-#     CRUD
-#     Get/Update/Create/Delete a Recipe object with given pk
-#     """
-#     def get_queryset(self):
-#         return Recipe.objects.all()
-#
-#     def get_object(self, pk):
-#         try:
-#             return Recipe.objects.get(pk=pk)
-#         except Recipe.DoesNotExist:
-#             raise Http404
-#
-#     def get(self, request, pk, format=None):
-#         recipe = self.get_object(pk)
-#         serializer = RecipeSerializer(recipe)
-#         return Response(serializer.data)
-#
-#     def put(self, request, pk, format=None):
-#         recipe = self.get_object(pk)
-#         serializer = RecipeSerializer(recipe, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         print(serializer.errors)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def post(self, request, format=None):
-#         serializer = RecipeSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def delete(self, request, pk, format=None):
-#         recipe = self.get_object(pk)
-#         recipe.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-#
-#
-# class RecipeList(APIView):
-#     """
-#     + everyone can see all recipes (of public accounts)
-#     All Recipe Objects
-#     """
-#     def get(self, request, format=None):
-#         recipes = Recipe.objects.all()
-#         serializer = RecipeSerializer(recipes, many=True)
-#         return Response(serializer.data)
-#
-#
-# class TagDetail(APIView):
-#     """
-#     CRUD
-#     Get/Update/Create/Delete a Tag object with given pk
-#     """
-#     def get_queryset(self):
-#         return Tag.objects.all()
-#
-#     def get_object(self, pk):
-#         try:
-#             return Tag.objects.get(pk=pk)
-#         except Tag.DoesNotExist:
-#             raise Http404
-#
-#     def get(self, request, pk, format=None):
-#         tag = self.get_object(pk)
-#         serializer = TagSerializer(tag)
-#         return Response(serializer.data)
-#
-#     def put(self, request, pk, format=None):
-#         tag = self.get_object(pk)
-#         serializer = TagSerializer(tag, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         print(serializer.errors)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def post(self, request, format=None):
-#         serializer = TagSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def delete(self, request, pk, format=None):
-#         tag = self.get_object(pk)
-#         tag.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
+    ingredients = request.query_params.get('ingredients', '').split(',')
+    recipes = Recipe.objects.filter(author__public=True)
+    for ing in ingredients:
+        recipes = recipes.filter(ingredients__ingredient__name__icontains=ing)
+    serializer = RecipeSerializer(recipes, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['POST', 'DELETE'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def comment_create(request, pk):
+    """
+    post a new comment - by you
+    """
+    try:
+        recipe = Recipe.objects.get(pk=pk)
+    except Recipe.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, recipe=recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

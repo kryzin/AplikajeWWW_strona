@@ -51,7 +51,8 @@ class TagSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ['content']
+        # only content, user and recipe and added based on logged-in user and pk in url
 
 
 class RecipeSerializer(serializers.ModelSerializer):
