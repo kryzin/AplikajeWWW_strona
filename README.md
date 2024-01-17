@@ -1,6 +1,8 @@
 
 # RecipeStash - recipe-sharing forum
 
+This repository was made as a final project for a "Aplikacje WWW" class at UWM in Olsztyn.
+
 ## Database
 
 ![](img/db.sqlite3%20-%20recipes_recipe.png)
@@ -8,7 +10,7 @@
 *not yet: Favourites or Collections to group 'saved' recipes*
 - Models aiding in relations: RecipeIngredient, RecipeTag
 
-## Endpoints (wip)
+## Endpoints 
 
 - CRUD Recipe, User, Ingredient, Tag, Comment
 - Search for recipe by tag, by ingredients, by author
